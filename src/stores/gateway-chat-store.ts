@@ -290,7 +290,9 @@ export const useGatewayChatStore = create<GatewayChatState>((set, get) => ({
         // Replace entire text (default), or append if fullReplace is explicitly false
         const next: StreamingState = {
           ...prev,
-          text: event.fullReplace === false ? prev.text + event.text : event.text,
+          text: stripFinalTags(
+            event.fullReplace === false ? prev.text + event.text : event.text,
+          ),
           runId: event.runId ?? prev.runId,
         }
 
