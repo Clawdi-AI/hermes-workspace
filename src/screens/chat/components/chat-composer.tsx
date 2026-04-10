@@ -117,8 +117,6 @@ type ModelSwitchNotice = {
   retryProvider?: string
 }
 
-const HERMES_API_URL = process.env.HERMES_API_URL || 'http://127.0.0.1:8642'
-
 function readModelText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -240,7 +238,7 @@ async function fetchModels(): Promise<{
     // Fall back to /v1/models
   }
 
-  const response = await fetch(`${HERMES_API_URL}/v1/models`)
+  const response = await fetch('/api/hermes-proxy/v1/models')
   if (!response.ok) {
     throw new Error(`Hermes models request failed (${response.status})`)
   }
@@ -967,7 +965,8 @@ function ChatComposerComponent({
     const models = modelsQuery.data?.models ?? []
     if (!models.length) return ''
     const first = models[0]
-    return typeof first === 'string' ? first : first.id || first.name || ''
+    if (typeof first === 'string') return first.trim()
+    return readModelText(first.id) || readModelText(first.name)
   }, [modelsQuery.data])
   const modelButtonLabel =
     currentSelectedModel || currentModel || configuredModel || '⚕ Hermes Agent'

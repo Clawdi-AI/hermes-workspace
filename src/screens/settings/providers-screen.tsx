@@ -25,7 +25,6 @@ import {
   getProviderInfo,
   normalizeProviderId,
 } from '@/lib/provider-catalog'
-import { getConfig, patchConfig } from '@/server/hermes-api'
 import { cn } from '@/lib/utils'
 
 /**
@@ -115,8 +114,6 @@ type SaveSettingPayload = {
   label: string
 }
 
-const HERMES_API_URL = process.env.HERMES_API_URL || 'http://127.0.0.1:8642'
-
 type HermesCatalogEntry =
   | string
   | {
@@ -137,7 +134,7 @@ async function fetchModels(): Promise<{
   models?: Array<ModelCatalogEntry>
   configuredProviders?: Array<string>
 }> {
-  const response = await fetch(`${HERMES_API_URL}/v1/models`)
+  const response = await fetch('/api/hermes-proxy/v1/models')
   if (!response.ok) {
     throw new Error(`Hermes models request failed (${response.status})`)
   }
@@ -212,6 +209,31 @@ async function fetchModels(): Promise<{
     models: models as Array<ModelCatalogEntry>,
     configuredProviders,
   }
+}
+
+async function getConfig(): Promise<HermesConfig> {
+  const response = await fetch('/api/hermes-proxy/api/config')
+  if (!response.ok) {
+    throw new Error(`Hermes config request failed (${response.status})`)
+  }
+  return response.json() as Promise<HermesConfig>
+}
+
+async function patchConfig(
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const response = await fetch('/api/hermes-proxy/api/config', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(
+      text || `Hermes config update failed (${response.status})`,
+    )
+  }
+  return response.json() as Promise<Record<string, unknown>>
 }
 
 const TAB_ORDER: Array<{ id: SettingsTabId; label: string }> = [

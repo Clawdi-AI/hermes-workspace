@@ -11,12 +11,21 @@ import {
   YAxis,
 } from 'recharts'
 import type { ReactNode } from 'react'
-import type { HermesSession } from '@/server/hermes-api'
 import { chatQueryKeys } from '@/screens/chat/chat-queries'
-import { getCapabilities } from '@/server/gateway-capabilities'
 import { getUnavailableReason } from '@/lib/feature-gates'
 import { useFeatureAvailable } from '@/hooks/use-feature-available'
 import { cn } from '@/lib/utils'
+
+type HermesSession = {
+  id: string
+  model?: string | null
+  title?: string | null
+  started_at?: number
+  message_count?: number
+  tool_call_count?: number
+  input_tokens?: number
+  output_tokens?: number
+}
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -605,6 +614,9 @@ export function DashboardScreen() {
   const navigate = useNavigate()
   const sessionsAvailable = useFeatureAvailable('sessions')
   const skillsAvailable = useFeatureAvailable('skills')
+  const memoryAvailable = useFeatureAvailable('memory')
+  const configAvailable = useFeatureAvailable('config')
+  const jobsAvailable = useFeatureAvailable('jobs')
   const sessionsQuery = useQuery({
     // Use a dedicated query key — NOT chatQueryKeys.sessions — to avoid
     // cache collisions with the chat sidebar which fetches fewer sessions
@@ -635,9 +647,11 @@ export function DashboardScreen() {
 
   const sessions = (sessionsQuery.data ?? [])
   const caps = {
-    ...getCapabilities(),
     sessions: sessionsAvailable,
     skills: skillsAvailable,
+    memory: memoryAvailable,
+    config: configAvailable,
+    jobs: jobsAvailable,
   }
 
   const stats = useMemo(() => {

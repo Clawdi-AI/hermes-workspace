@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Editor } from '@monaco-editor/react'
 import { createFileRoute } from '@tanstack/react-router'
+import { configureMonaco } from '@/lib/monaco'
 import { usePageTitle } from '@/hooks/use-page-title'
 import { FileExplorerSidebar } from '@/components/file-explorer'
 import { resolveTheme, useSettings } from '@/hooks/use-settings'
@@ -54,6 +55,7 @@ function FilesRoute() {
   const [isMobile, setIsMobile] = useState(false)
   const [fileExplorerCollapsed, setFileExplorerCollapsed] = useState(false)
   const [editorValue, setEditorValue] = useState(INITIAL_EDITOR_VALUE)
+  const [editorReady, setEditorReady] = useState(false)
   const resolvedTheme = resolveTheme(settings.theme)
 
   useEffect(() => {
@@ -68,6 +70,16 @@ function FilesRoute() {
     if (!isMobile) return
     setFileExplorerCollapsed(true)
   }, [isMobile])
+
+  useEffect(() => {
+    let cancelled = false
+    configureMonaco().then(() => {
+      if (!cancelled) setEditorReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleInsertReference = useCallback(function handleInsertReference(
     reference: string,
@@ -95,21 +107,27 @@ function FilesRoute() {
             </p>
           </header>
           <div className="min-h-0 flex-1 pb-24 md:pb-0">
-            <Editor
-              height="100%"
-              theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs-light'}
-              language="typescript"
-              value={editorValue}
-              onChange={function onEditorChange(value) {
-                setEditorValue(value || '')
-              }}
-              options={{
-                minimap: { enabled: settings.editorMinimap },
-                fontSize: settings.editorFontSize,
-                scrollBeyondLastLine: false,
-                wordWrap: settings.editorWordWrap ? 'on' : 'off',
-              }}
-            />
+            {editorReady ? (
+              <Editor
+                height="100%"
+                theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs-light'}
+                language="typescript"
+                value={editorValue}
+                onChange={function onEditorChange(value) {
+                  setEditorValue(value || '')
+                }}
+                options={{
+                  minimap: { enabled: settings.editorMinimap },
+                  fontSize: settings.editorFontSize,
+                  scrollBeyondLastLine: false,
+                  wordWrap: settings.editorWordWrap ? 'on' : 'off',
+                }}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-primary-600">
+                Loading editor...
+              </div>
+            )}
           </div>
         </main>
       </div>

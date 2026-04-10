@@ -30,7 +30,6 @@ import { LoginScreen } from '@/components/auth/login-screen'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { MobileHamburgerMenu } from '@/components/mobile-hamburger-menu'
 import { MobilePageHeader } from '@/components/mobile-page-header'
-import { HermesOnboarding } from '@/components/onboarding/hermes-onboarding'
 import { MobileTerminalInput } from '@/components/terminal/mobile-terminal-input'
 import { HermesReconnectBanner } from '@/components/hermes-reconnect-banner'
 import { useMobileKeyboard } from '@/hooks/use-mobile-keyboard'
@@ -106,14 +105,13 @@ export function WorkspaceShell() {
     return -1
   }, [])
 
-  const isClient = typeof window !== 'undefined'
-  // Both SSR and client start with the same value to avoid hydration mismatch.
-  // The ConnectionStartupScreen overlay verifies the real status on mount.
+  // Start SSR and the first client render in the verified state so hydration
+  // matches, then show the startup checker after mount.
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
-  const [connectionVerified, setConnectionVerified] = useState(false)
+  const [connectionVerified, setConnectionVerified] = useState(true)
 
   const authState = {
-    checked: !isClient || connectionVerified,
+    checked: connectionVerified,
     authenticated: authStatus?.authenticated ?? true,
     authRequired: authStatus?.authRequired ?? false,
   }
@@ -202,6 +200,10 @@ export function WorkspaceShell() {
       document.documentElement.style.removeProperty('--titlebar-h')
     }
   }, [isElectron])
+
+  useEffect(() => {
+    setConnectionVerified(false)
+  }, [])
 
   // Keep mobile sidebar state closed after resize and route changes.
   useEffect(() => {
@@ -333,31 +335,19 @@ export function WorkspaceShell() {
             ].join(' ')}
             data-tour="chat-area"
           >
-            {/* Persistent terminal — stays mounted to preserve session across navigation */}
-            <div
-              className="flex flex-col"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                visibility: isOnTerminalRoute ? 'visible' : 'hidden',
-                pointerEvents: isOnTerminalRoute ? 'auto' : 'none',
-                zIndex: isOnTerminalRoute ? 1 : -1,
-              }}
-            >
-              {isMobile && isOnTerminalRoute && (
-                <MobilePageHeader title="Terminal" />
-              )}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <Suspense fallback={null}>
-                  <TerminalWorkspace
-                    mode="fullscreen"
-                    panelVisible={isOnTerminalRoute}
-                  />
-                </Suspense>
+            {isOnTerminalRoute && (
+              <div
+                className="absolute inset-0 z-[1] flex flex-col"
+              >
+                {isMobile && <MobilePageHeader title="Terminal" />}
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <Suspense fallback={null}>
+                    <TerminalWorkspace mode="fullscreen" panelVisible />
+                  </Suspense>
+                </div>
+                <MobileTerminalInput />
               </div>
-              {/* Mobile input bar — sibling to terminal, NOT a child, so SSE re-renders don't freeze it */}
-              {isMobile && <MobileTerminalInput />}
-            </div>
+            )}
 
             <div
               className={[
@@ -406,7 +396,6 @@ export function WorkspaceShell() {
       <MobileHamburgerMenu />
       {/* System metrics footer removed */}
       <CommandPalette pathname={pathname} sessions={sessions} />
-      <HermesOnboarding />
     </>
   )
 }

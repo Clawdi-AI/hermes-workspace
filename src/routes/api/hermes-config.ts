@@ -13,6 +13,7 @@ import {
   getCapabilities,
 } from '../../server/gateway-capabilities'
 import { createCapabilityUnavailablePayload } from '@/lib/feature-gates'
+import { redactHermesConfigForClient } from '@/lib/hermes-config-redaction'
 
 type AuthResult = Response | true
 
@@ -223,7 +224,7 @@ export const Route = createFileRoute('/api/hermes-config')({
         }
 
         return Response.json({
-          config,
+          config: redactHermesConfigForClient(config),
           providers: providerStatus,
           activeProvider,
           activeModel,

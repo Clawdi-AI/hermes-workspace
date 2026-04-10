@@ -412,6 +412,8 @@ export function FileExplorerSidebar({
 
       <div className="px-3 py-2">
         <input
+          id="workspace-file-search"
+          name="workspace-file-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search files"
@@ -507,6 +509,8 @@ export function FileExplorerSidebar({
 
       <input
         ref={uploadInputRef}
+        id="workspace-file-upload"
+        name="workspace-file-upload"
         type="file"
         multiple
         className="hidden"

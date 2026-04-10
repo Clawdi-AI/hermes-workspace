@@ -1,9 +1,9 @@
 import { URL, fileURLToPath } from 'node:url'
 import { execSync, spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { copyFileSync, cpSync, createReadStream, existsSync, mkdirSync } from 'node:fs'
 import net from 'node:net'
-import { resolve, dirname } from 'node:path'
+import { resolve, dirname, join, normalize } from 'node:path'
 import os from 'node:os'
 
 // devtools removed
@@ -71,6 +71,7 @@ async function isHermesAgentHealthy(port = 8642): Promise<boolean> {
 const config = defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const hermesApiUrl = env.HERMES_API_URL?.trim() || 'http://127.0.0.1:8642'
+  const monacoVsDir = resolve('node_modules', 'monaco-editor', 'min', 'vs')
 
   // Hermes Agent auto-start state
   let hermesAgentChild: ChildProcess | null = null
@@ -659,6 +660,40 @@ const config = defineConfig(({ mode, command }) => {
           result = result.replace(/process\.env/g, '{}')
           result = result.replace(/process\.platform/g, '"browser"')
           return result
+        },
+      },
+      {
+        name: 'self-host-monaco',
+        configureServer(server) {
+          server.middlewares.use('/monaco/vs', (req, res, next) => {
+            const rawUrl = req.url?.split('?')[0] || '/'
+            const relativePath = normalize(decodeURIComponent(rawUrl)).replace(
+              /^(\.\.[/\\])+/,
+              '',
+            )
+            const filePath = join(monacoVsDir, relativePath)
+            if (!filePath.startsWith(monacoVsDir)) {
+              res.statusCode = 403
+              res.end('Forbidden')
+              return
+            }
+            if (!existsSync(filePath)) {
+              next()
+              return
+            }
+            if (filePath.endsWith('.js')) {
+              res.setHeader('Content-Type', 'application/javascript')
+            } else if (filePath.endsWith('.css')) {
+              res.setHeader('Content-Type', 'text/css')
+            }
+            createReadStream(filePath).pipe(res)
+          })
+        },
+        closeBundle() {
+          if (!existsSync(monacoVsDir)) return
+          cpSync(monacoVsDir, resolve('dist', 'client', 'monaco', 'vs'), {
+            recursive: true,
+          })
         },
       },
       // Copy pty-helper.py into the server assets directory after build

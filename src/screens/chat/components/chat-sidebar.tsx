@@ -570,9 +570,15 @@ function ChatSidebarComponent({
     if (systemRoutes.includes(pathname)) setLastRoute('system', pathname)
   }, [pathname])
 
-  const mainNav = getLastRoute('main') || '/chat'
-  const knowledgeNav = getLastRoute('knowledge') || '/memory'
-  const _systemNav = getLastRoute('system') || '/settings'
+  const mainNav = mainRoutes.includes(pathname)
+    ? pathname
+    : getLastRoute('main') || '/chat'
+  const knowledgeNav = knowledgeRoutes.includes(pathname)
+    ? pathname
+    : getLastRoute('knowledge') || '/memory'
+  const _systemNav = systemRoutes.includes(pathname)
+    ? pathname
+    : getLastRoute('system') || '/settings'
 
   const transition = {
     duration: 0.15,
