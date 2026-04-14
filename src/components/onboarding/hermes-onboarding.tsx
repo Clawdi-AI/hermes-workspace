@@ -431,9 +431,25 @@ export function HermesOnboarding() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!localStorage.getItem(ONBOARDING_KEY)) {
-      setShow(true)
-    }
+    if (localStorage.getItem(ONBOARDING_KEY)) return
+
+    // Auto-skip onboarding when a fully configured Hermes gateway is detected.
+    fetch('/api/gateway-status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: GatewayStatusResponse | null) => {
+        if (
+          data?.capabilities?.sessions &&
+          data?.capabilities?.enhancedChat
+        ) {
+          // Gateway is ready with enhanced chat — config is pre-provisioned.
+          localStorage.setItem(ONBOARDING_KEY, 'true')
+          return
+        }
+        setShow(true)
+      })
+      .catch(() => {
+        setShow(true)
+      })
   }, [])
 
   useEffect(() => {
