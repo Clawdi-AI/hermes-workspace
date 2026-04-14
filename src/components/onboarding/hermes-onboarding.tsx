@@ -211,7 +211,10 @@ export function HermesOnboarding() {
       const data = (await res.json()) as GatewayStatusResponse
       setBackendInfo(data)
 
-      if (data.capabilities?.chatCompletions) {
+      if (
+        data.capabilities?.chatCompletions ||
+        (data.capabilities?.sessions && data.capabilities?.enhancedChat)
+      ) {
         setBackendStatus('ready')
         setBackendMessage(
           data.capabilities.sessions
